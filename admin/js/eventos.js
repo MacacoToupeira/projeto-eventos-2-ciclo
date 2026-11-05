@@ -21,7 +21,7 @@ const eventsController = {
                 <td class="actions">
                     <a class="btn-sm btn-edit" href="inscritos.html?evento=${item.id}">Ver inscritos</a>
                     <button type="button" class="btn-sm btn-edit">Editar</button>
-                    <button type="button" class="btn-sm btn-delete">Excluir</button>
+                    <button type="button" class="btn-sm btn-delete" data-id="${item.id}">Excluir</button>
                 </td>
             </tr>
         ` 
@@ -42,14 +42,38 @@ const eventsController = {
 
         document.querySelector("#campo-categoria").innerHTML = template
     },
+    validate: (element, value, size) => {
+        const selectError = document.querySelector(`#campo-${element} + .error`);
+        
+        if(value.length < size) {
+            selectError.classList.add("show");
+            return false;
+        }
+
+        selectError.classList.remove("show");
+
+        return true;
+    },
     getFormData: () => {
         const nome = document.querySelector("#campo-titulo").value;
-        if(nome.length < 3) {
-            return alert("O nome deve ter pelo menos 3 caracteres")
+
+        if(!eventsController.validate("titulo", nome, 3)) {
+            return;
         }
+       
         const categoria_id = document.querySelector("#campo-categoria").value;
         const data = document.querySelector("#campo-data").value;
+
+        if(!eventsController.validate("data", data, 3)) {
+            return;
+        }
+
         const horario = document.querySelector("#campo-horario").value;
+
+        if(!eventsController.validate("horario", horario, 3)) {
+            return;
+        }
+
         const local = document.querySelector("#campo-local").value;
         const endereco = document.querySelector("#campo-endereco").value;
         const vagas_totais = document.querySelector("#campo-vagas-totais").value;
@@ -77,6 +101,9 @@ const eventsController = {
     bindEventButton: () => {
         document.querySelector("#salvar-evento").addEventListener("click", async () => {
             const data = eventsController.getFormData()
+            if(!data) {
+                return;
+            }
             console.log("data", data)
 
             const event = await supabaseClient.from("eventos").insert(data).select()
@@ -98,12 +125,23 @@ const eventsController = {
             return eventsController.templateItem(item)
         }).join("")
 
-        document.querySelector("#events").innerHTML = template
+        document.querySelector("#events").innerHTML = template;
+
+        ([...document.querySelectorAll(".btn-delete")].map(btn => {
+            btn.addEventListener("click", async function() {
+                const id = this.getAttribute("data-id")
+                console.log("id", id)
+                await supabaseClient.from("eventos").delete().eq("id", id)
+                eventsController.populateEventTable()
+            })
+        }))
+
     },
     init: async () => {
         eventsController.mountCategories()
         eventsController.bindEventButton()
         eventsController.populateEventTable()
+
     }
 }
 
